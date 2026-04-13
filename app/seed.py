@@ -7,19 +7,77 @@ from sqlalchemy.orm import Session
 
 from app.models import Category, Entry, MenuItem, Page, Tag, User
 from app.security import hash_password
-from app.settings import require_env
+from app.settings import load_env_file, require_env
+
+
+load_env_file()
+
+
+def ensure_user(
+    db: Session,
+    *,
+    username: str,
+    display_name: str,
+    password: str,
+    is_admin: bool,
+) -> User:
+    user = db.scalar(select(User).where(User.username == username))
+    if user:
+        updated = False
+        if user.display_name != display_name:
+            user.display_name = display_name
+            updated = True
+        if user.is_admin != is_admin:
+            user.is_admin = is_admin
+            updated = True
+        if updated:
+            db.add(user)
+        return user
+
+    user = User(
+        username=username,
+        display_name=display_name,
+        password_hash=hash_password(password),
+        is_admin=is_admin,
+    )
+    db.add(user)
+    db.flush()
+    return user
 
 
 def ensure_seed_data(db: Session) -> None:
-    if db.scalar(select(User.id).limit(1)):
-        return
-
-    user = User(
+    ensure_user(
+        db,
         username=os.getenv("ASE_ADMIN_USERNAME", "admin"),
         display_name="Equipo A.S.E.",
-        password_hash=hash_password(require_env("ASE_ADMIN_PASSWORD")),
+        password=require_env("ASE_ADMIN_PASSWORD"),
         is_admin=True,
     )
+    ensure_user(
+        db,
+        username="ema",
+        display_name="Ema",
+        password=require_env("ASE_EMA_PASSWORD"),
+        is_admin=False,
+    )
+    ensure_user(
+        db,
+        username="gael",
+        display_name="Gael",
+        password=require_env("ASE_GAEL_PASSWORD"),
+        is_admin=False,
+    )
+    ensure_user(
+        db,
+        username="oliver",
+        display_name="Oliver",
+        password=require_env("ASE_OLIVER_PASSWORD"),
+        is_admin=False,
+    )
+
+    if db.scalar(select(Entry.id).limit(1)):
+        db.commit()
+        return
 
     cuentos = Category(
         name="Cuentos", slug="cuentos", description="Historias inventadas por la A.S.E."
@@ -134,7 +192,6 @@ pero una idea quiere entrar:
 
     db.add_all(
         [
-            user,
             cuentos,
             poemas,
             otros,

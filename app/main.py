@@ -6,7 +6,7 @@ import re
 import unicodedata
 
 from fastapi import Depends, FastAPI, Form, HTTPException, Request, status
-from fastapi.responses import RedirectResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from markdown import markdown
@@ -18,7 +18,7 @@ from app.db import Base, SessionLocal, engine, get_db
 from app.models import Category, Comment, Entry, MenuItem, Page, Tag, User
 from app.settings import load_env_file, require_env
 from app.seed import ensure_seed_data
-from app.security import verify_password
+from app.security import hash_password, verify_password
 
 
 APP_DIR = Path(__file__).resolve().parent
@@ -60,11 +60,13 @@ def unique_slug(db: Session, model: type[Entry] | type[Page] | type[Category] | 
 def build_context(request: Request, db: Session, **extra: object) -> dict[str, object]:
     menu_items = db.scalars(select(MenuItem).order_by(MenuItem.position, MenuItem.id)).all()
     popular_tags = db.scalars(select(Tag).order_by(Tag.name)).all()
+    current_user = get_current_user(request, db)
     context = {
         "request": request,
         "menu_items": menu_items,
         "popular_tags": popular_tags,
         "site_name": "A.S.E.",
+        "current_user": current_user,
     }
     context.update(extra)
     return context
@@ -82,6 +84,21 @@ def require_admin(request: Request, db: Session) -> User:
     if not user or not user.is_admin:
         raise HTTPException(status_code=status.HTTP_303_SEE_OTHER, headers={"Location": "/admin/login"})
     return user
+
+
+def require_user(request: Request, db: Session) -> User:
+    user = get_current_user(request, db)
+    if not user:
+        raise HTTPException(status_code=status.HTTP_303_SEE_OTHER, headers={"Location": "/admin/login"})
+    return user
+
+
+def get_author_users(db: Session) -> list[User]:
+    return db.scalars(select(User).where(User.is_admin.is_(False)).order_by(User.display_name)).all()
+
+
+def can_manage_entry(user: User, entry: Entry) -> bool:
+    return user.is_admin or entry.author_name == user.display_name
 
 
 def assign_tags(db: Session, tag_names: str) -> list[Tag]:
@@ -338,13 +355,25 @@ def admin_logout(request: Request):
 
 @app.get("/admin")
 def admin_dashboard(request: Request, db: Session = Depends(get_db)):
-    user = require_admin(request, db)
-    entries = db.scalars(select(Entry).options(joinedload(Entry.category)).order_by(Entry.updated_at.desc())).all()
-    pages = db.scalars(select(Page).order_by(Page.updated_at.desc())).all()
-    menu_items = db.scalars(select(MenuItem).order_by(MenuItem.position, MenuItem.id)).all()
-    pending_comments = db.scalars(
-        select(Comment).options(joinedload(Comment.entry)).where(Comment.is_approved.is_(False)).order_by(Comment.created_at.desc())
-    ).all()
+    user = require_user(request, db)
+    entry_stmt = select(Entry).options(joinedload(Entry.category)).order_by(Entry.updated_at.desc())
+    if not user.is_admin:
+        entry_stmt = entry_stmt.where(Entry.author_name == user.display_name)
+    entries = db.scalars(entry_stmt).all()
+    pages = db.scalars(select(Page).order_by(Page.updated_at.desc())).all() if user.is_admin else []
+    menu_items = db.scalars(select(MenuItem).order_by(MenuItem.position, MenuItem.id)).all() if user.is_admin else []
+    pending_comments = (
+        db.scalars(
+            select(Comment)
+            .options(joinedload(Comment.entry))
+            .where(Comment.is_approved.is_(False))
+            .order_by(Comment.created_at.desc())
+        ).all()
+        if user.is_admin
+        else []
+    )
+    author_users = get_author_users(db)
+    users = db.scalars(select(User).order_by(User.is_admin.desc(), User.display_name)).all() if user.is_admin else []
     return templates.TemplateResponse(
         request,
         "admin_dashboard.html",
@@ -356,32 +385,38 @@ def admin_dashboard(request: Request, db: Session = Depends(get_db)):
             pages=pages,
             menu_items=menu_items,
             pending_comments=pending_comments,
+            author_users=author_users,
+            users=users,
         ),
     )
 
 
 @app.get("/admin/entries/new")
 def admin_new_entry(request: Request, db: Session = Depends(get_db)):
-    require_admin(request, db)
+    user = require_user(request, db)
     categories = db.scalars(select(Category).order_by(Category.name)).all()
+    author_users = get_author_users(db)
     return templates.TemplateResponse(
         request,
         "admin_entry_form.html",
-        build_context(request, db, entry=None, categories=categories),
+        build_context(request, db, entry=None, categories=categories, author_users=author_users, user=user),
     )
 
 
 @app.get("/admin/entries/{entry_id}/edit")
 def admin_edit_entry(request: Request, entry_id: int, db: Session = Depends(get_db)):
-    require_admin(request, db)
+    user = require_user(request, db)
     entry = db.scalar(select(Entry).options(selectinload(Entry.tags), joinedload(Entry.category)).where(Entry.id == entry_id))
     if not entry:
         raise HTTPException(status_code=404, detail="Entrada no encontrada")
+    if not can_manage_entry(user, entry):
+        raise HTTPException(status_code=403, detail="No tenes permisos para editar esta entrada")
     categories = db.scalars(select(Category).order_by(Category.name)).all()
+    author_users = get_author_users(db)
     return templates.TemplateResponse(
         request,
         "admin_entry_form.html",
-        build_context(request, db, entry=entry, categories=categories),
+        build_context(request, db, entry=entry, categories=categories, author_users=author_users, user=user),
     )
 
 
@@ -393,37 +428,43 @@ def admin_save_entry(
     summary: str = Form(""),
     content: str = Form(...),
     kind: str = Form(...),
-    author_name: str = Form("A.S.E."),
+    author_name: str = Form(""),
     category_name: str = Form(""),
     tag_names: str = Form(""),
     is_published: bool = Form(False),
     featured: bool = Form(False),
     db: Session = Depends(get_db),
 ):
-    require_admin(request, db)
+    user = require_user(request, db)
     entry = db.get(Entry, entry_id) if entry_id else Entry()
     if entry_id and not entry:
         raise HTTPException(status_code=404, detail="Entrada no encontrada")
+    if entry.id and not can_manage_entry(user, entry):
+        raise HTTPException(status_code=403, detail="No tenes permisos para editar esta entrada")
+    db.add(entry)
     entry.title = title.strip()
     entry.slug = unique_slug(db, Entry, title, current_id=entry.id if entry.id else None)
     entry.summary = summary.strip()
     entry.content = content.strip()
     entry.kind = kind
-    entry.author_name = author_name.strip() or "A.S.E."
+    if user.is_admin:
+        available_names = {author.display_name for author in get_author_users(db)}
+        entry.author_name = author_name.strip() if author_name.strip() in available_names else "A.S.E."
+    else:
+        entry.author_name = user.display_name
     entry.is_published = is_published
     entry.featured = featured
     entry.category = get_or_create_category(db, category_name)
     entry.tags = assign_tags(db, tag_names)
-    db.add(entry)
     db.commit()
     return RedirectResponse("/admin", status_code=status.HTTP_303_SEE_OTHER)
 
 
 @app.post("/admin/entries/{entry_id}/delete")
 def admin_delete_entry(request: Request, entry_id: int, db: Session = Depends(get_db)):
-    require_admin(request, db)
+    user = require_user(request, db)
     entry = db.get(Entry, entry_id)
-    if entry:
+    if entry and can_manage_entry(user, entry):
         db.delete(entry)
         db.commit()
     return RedirectResponse("/admin", status_code=status.HTTP_303_SEE_OTHER)
@@ -543,3 +584,112 @@ def admin_delete_comment(request: Request, comment_id: int, db: Session = Depend
         db.delete(comment)
         db.commit()
     return RedirectResponse("/admin", status_code=status.HTTP_303_SEE_OTHER)
+
+
+@app.post("/admin/markdown/preview", response_class=HTMLResponse)
+def admin_markdown_preview(
+    request: Request,
+    content: str = Form(""),
+    db: Session = Depends(get_db),
+):
+    require_user(request, db)
+    return render_markdown(content)
+
+
+@app.get("/admin/password")
+def admin_password_form(request: Request, db: Session = Depends(get_db)):
+    user = require_user(request, db)
+    return templates.TemplateResponse(
+        request,
+        "admin_password_form.html",
+        build_context(request, db, user=user, target_user=user, error=None, success=None),
+    )
+
+
+@app.post("/admin/password")
+def admin_password_submit(
+    request: Request,
+    current_password: str = Form(""),
+    new_password: str = Form(...),
+    confirm_password: str = Form(...),
+    db: Session = Depends(get_db),
+):
+    user = require_user(request, db)
+    if not user.is_admin and not verify_password(current_password, user.password_hash):
+        return templates.TemplateResponse(
+            request,
+            "admin_password_form.html",
+            build_context(request, db, user=user, target_user=user, error="La contraseña actual no coincide.", success=None),
+            status_code=400,
+        )
+    if len(new_password.strip()) < 8:
+        return templates.TemplateResponse(
+            request,
+            "admin_password_form.html",
+            build_context(request, db, user=user, target_user=user, error="La nueva contraseña debe tener al menos 8 caracteres.", success=None),
+            status_code=400,
+        )
+    if new_password != confirm_password:
+        return templates.TemplateResponse(
+            request,
+            "admin_password_form.html",
+            build_context(request, db, user=user, target_user=user, error="La confirmación no coincide.", success=None),
+            status_code=400,
+        )
+    user.password_hash = hash_password(new_password.strip())
+    db.add(user)
+    db.commit()
+    return templates.TemplateResponse(
+        request,
+        "admin_password_form.html",
+        build_context(request, db, user=user, target_user=user, error=None, success="Contraseña actualizada."),
+    )
+
+
+@app.get("/admin/users/{user_id}/password")
+def admin_user_password_form(request: Request, user_id: int, db: Session = Depends(get_db)):
+    user = require_admin(request, db)
+    target_user = db.get(User, user_id)
+    if not target_user:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+    return templates.TemplateResponse(
+        request,
+        "admin_password_form.html",
+        build_context(request, db, user=user, target_user=target_user, error=None, success=None),
+    )
+
+
+@app.post("/admin/users/{user_id}/password")
+def admin_user_password_submit(
+    request: Request,
+    user_id: int,
+    new_password: str = Form(...),
+    confirm_password: str = Form(...),
+    db: Session = Depends(get_db),
+):
+    user = require_admin(request, db)
+    target_user = db.get(User, user_id)
+    if not target_user:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+    if len(new_password.strip()) < 8:
+        return templates.TemplateResponse(
+            request,
+            "admin_password_form.html",
+            build_context(request, db, user=user, target_user=target_user, error="La nueva contraseña debe tener al menos 8 caracteres.", success=None),
+            status_code=400,
+        )
+    if new_password != confirm_password:
+        return templates.TemplateResponse(
+            request,
+            "admin_password_form.html",
+            build_context(request, db, user=user, target_user=target_user, error="La confirmación no coincide.", success=None),
+            status_code=400,
+        )
+    target_user.password_hash = hash_password(new_password.strip())
+    db.add(target_user)
+    db.commit()
+    return templates.TemplateResponse(
+        request,
+        "admin_password_form.html",
+        build_context(request, db, user=user, target_user=target_user, error=None, success="Contraseña actualizada."),
+    )

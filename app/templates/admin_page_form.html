@@ -18,10 +18,29 @@
       Extracto
       <textarea name="excerpt" rows="3">{{ page.excerpt if page else '' }}</textarea>
     </label>
-    <label>
-      Contenido
-      <textarea name="content" rows="14" required>{{ page.content if page else '' }}</textarea>
-    </label>
+    <div class="markdown-editor" data-markdown-editor>
+      <div class="editor-toolbar" role="toolbar" aria-label="Herramientas de formato">
+        <button type="button" data-action="bold">Negrita</button>
+        <button type="button" data-action="italic">Cursiva</button>
+        <button type="button" data-action="heading">Titulo</button>
+        <button type="button" data-action="quote">Cita</button>
+        <button type="button" data-action="list">Lista</button>
+        <button type="button" data-action="link">Link</button>
+        <button type="button" data-action="image">Imagen</button>
+        <button type="button" data-action="preview">Previsualizar</button>
+      </div>
+      <label>
+        Contenido
+        <textarea name="content" rows="14" required data-markdown-input data-preview-target="page-content-preview">{{ page.content if page else '' }}</textarea>
+      </label>
+      <section class="markdown-preview" data-preview-panel hidden>
+        <div class="preview-header">
+          <strong>Previsualizacion</strong>
+          <button type="button" data-action="edit">Volver a editar</button>
+        </div>
+        <div class="content-card" id="page-content-preview"></div>
+      </section>
+    </div>
     <label class="checkbox-row">
       <input type="checkbox" name="is_published" {% if not page or page.is_published %}checked{% endif %}>
       Publicada
@@ -32,4 +51,7 @@
     </div>
   </form>
 </section>
+{% endblock %}
+{% block scripts %}
+<script src="{{ url_for('static', path='/js/admin_editor.js') }}"></script>
 {% endblock %}

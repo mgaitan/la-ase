@@ -361,6 +361,12 @@ select {
   gap: 16px;
 }
 
+.admin-header-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
 .admin-grid {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
@@ -419,6 +425,49 @@ select {
 .error-text {
   color: #c53737;
   font-weight: 800;
+}
+
+.success-text {
+  color: #1b7f4a;
+  font-weight: 800;
+}
+
+.markdown-editor {
+  display: grid;
+  gap: 14px;
+}
+
+.editor-toolbar {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.editor-toolbar button,
+.preview-header button {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 8px 12px;
+  background: white;
+  color: var(--accent-dark);
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.markdown-preview {
+  display: grid;
+  gap: 12px;
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  padding: 16px;
+  background: #fffdfa;
+}
+
+.preview-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
 }
 
 @media (max-width: 900px) {

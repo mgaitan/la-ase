@@ -36,6 +36,9 @@ La app lee el archivo `.env` al arrancar. Un ejemplo mínimo:
 SESSION_SECRET='una-clave-larga-y-privada'
 ASE_ADMIN_USERNAME='admin'
 ASE_ADMIN_PASSWORD='cambiar-esto'
+ASE_EMA_PASSWORD='cambiar-esto'
+ASE_GAEL_PASSWORD='cambiar-esto'
+ASE_OLIVER_PASSWORD='cambiar-esto'
 uv run fastapi dev
 ```
 

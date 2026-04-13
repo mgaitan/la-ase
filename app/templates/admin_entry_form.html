@@ -18,10 +18,29 @@
       Resumen
       <textarea name="summary" rows="3">{{ entry.summary if entry else '' }}</textarea>
     </label>
-    <label>
-      Contenido
-      <textarea name="content" rows="14" required>{{ entry.content if entry else '' }}</textarea>
-    </label>
+    <div class="markdown-editor" data-markdown-editor>
+      <div class="editor-toolbar" role="toolbar" aria-label="Herramientas de formato">
+        <button type="button" data-action="bold">Negrita</button>
+        <button type="button" data-action="italic">Cursiva</button>
+        <button type="button" data-action="heading">Titulo</button>
+        <button type="button" data-action="quote">Cita</button>
+        <button type="button" data-action="list">Lista</button>
+        <button type="button" data-action="link">Link</button>
+        <button type="button" data-action="image">Imagen</button>
+        <button type="button" data-action="preview">Previsualizar</button>
+      </div>
+      <label>
+        Contenido
+        <textarea name="content" rows="14" required data-markdown-input data-preview-target="entry-content-preview">{{ entry.content if entry else '' }}</textarea>
+      </label>
+      <section class="markdown-preview" data-preview-panel hidden>
+        <div class="preview-header">
+          <strong>Previsualizacion</strong>
+          <button type="button" data-action="edit">Volver a editar</button>
+        </div>
+        <div class="content-card" id="entry-content-preview"></div>
+      </section>
+    </div>
     <div class="form-split">
       <label>
         Seccion
@@ -32,7 +51,15 @@
       </label>
       <label>
         Autor
-        <input type="text" name="author_name" value="{{ entry.author_name if entry else 'A.S.E.' }}">
+        {% if user.is_admin %}
+        <select name="author_name">
+          {% for author in author_users %}
+          <option value="{{ author.display_name }}" {% if (entry and entry.author_name == author.display_name) or (not entry and loop.first) %}selected{% endif %}>{{ author.display_name }}</option>
+          {% endfor %}
+        </select>
+        {% else %}
+        <input type="text" name="author_name" value="{{ user.display_name }}" readonly>
+        {% endif %}
       </label>
     </div>
     <label>
@@ -62,4 +89,7 @@
     </div>
   </form>
 </section>
+{% endblock %}
+{% block scripts %}
+<script src="{{ url_for('static', path='/js/admin_editor.js') }}"></script>
 {% endblock %}
