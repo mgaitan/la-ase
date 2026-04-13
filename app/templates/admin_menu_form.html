@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}{{ "Editar" if menu_item else "Nuevo" }} menu | A.S.E.{% endblock %}
+{% block content %}
+<section class="admin-form-wrap">
+  <div class="page-intro">
+    <p class="eyebrow">Panel</p>
+    <h1>{{ "Editar" if menu_item else "Nuevo" }} item de menu</h1>
+  </div>
+  <form method="post" action="/admin/menu/save" class="stack-form">
+    {% if menu_item %}
+    <input type="hidden" name="item_id" value="{{ menu_item.id }}">
+    {% endif %}
+    <label>
+      Etiqueta
+      <input type="text" name="label" value="{{ menu_item.label if menu_item else '' }}" required>
+    </label>
+    <label>
+      URL
+      <input type="text" name="url" value="{{ menu_item.url if menu_item else '' }}" placeholder="/publicaciones" required>
+    </label>
+    <label>
+      Orden
+      <input type="number" name="position" value="{{ menu_item.position if menu_item else 1 }}" min="0">
+    </label>
+    <div class="admin-actions">
+      <button class="button primary" type="submit">Guardar</button>
+      <a class="button secondary" href="/admin">Cancelar</a>
+    </div>
+  </form>
+</section>
+{% endblock %}

@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% block title %}Panel | A.S.E.{% endblock %}
+{% block content %}
+<section class="page-intro admin-top">
+  <div>
+    <p class="eyebrow">Panel de edicion</p>
+    <h1>Gestion de contenidos</h1>
+    <p>Bienvenido, {{ user.display_name }}.</p>
+  </div>
+  <a class="button secondary" href="/admin/logout">Salir</a>
+</section>
+
+<section class="admin-actions">
+  <a class="button primary" href="/admin/entries/new">Nueva entrada</a>
+  <a class="button secondary" href="/admin/pages/new">Nueva pagina</a>
+  <a class="button secondary" href="/admin/menu/new">Nuevo item de menu</a>
+</section>
+
+<section class="admin-grid">
+  <div class="admin-panel">
+    <h2>Entradas</h2>
+    {% for entry in entries %}
+    <article class="admin-list-item">
+      <div>
+        <strong>{{ entry.title }}</strong>
+        <p>{{ entry.kind }}{% if entry.category %} · {{ entry.category.name }}{% endif %}</p>
+      </div>
+      <div class="admin-item-actions">
+        <a href="/admin/entries/{{ entry.id }}/edit">Editar</a>
+        <form method="post" action="/admin/entries/{{ entry.id }}/delete">
+          <button type="submit">Borrar</button>
+        </form>
+      </div>
+    </article>
+    {% endfor %}
+  </div>
+
+  <div class="admin-panel">
+    <h2>Paginas</h2>
+    {% for page in pages %}
+    <article class="admin-list-item">
+      <div>
+        <strong>{{ page.title }}</strong>
+        <p>/paginas/{{ page.slug }}</p>
+      </div>
+      <div class="admin-item-actions">
+        <a href="/admin/pages/{{ page.id }}/edit">Editar</a>
+        <form method="post" action="/admin/pages/{{ page.id }}/delete">
+          <button type="submit">Borrar</button>
+        </form>
+      </div>
+    </article>
+    {% endfor %}
+  </div>
+
+  <div class="admin-panel">
+    <h2>Menu</h2>
+    {% for item in menu_items %}
+    <article class="admin-list-item">
+      <div>
+        <strong>{{ item.label }}</strong>
+        <p>{{ item.url }}</p>
+      </div>
+      <div class="admin-item-actions">
+        <a href="/admin/menu/{{ item.id }}/edit">Editar</a>
+        <form method="post" action="/admin/menu/{{ item.id }}/delete">
+          <button type="submit">Borrar</button>
+        </form>
+      </div>
+    </article>
+    {% endfor %}
+  </div>
+
+  <div class="admin-panel">
+    <h2>Comentarios pendientes</h2>
+    {% for comment in pending_comments %}
+    <article class="admin-list-item">
+      <div>
+        <strong>{{ comment.author_name }}</strong>
+        <p>{{ comment.entry.title }}</p>
+        <p>{{ comment.content }}</p>
+      </div>
+      <div class="admin-item-actions">
+        <form method="post" action="/admin/comments/{{ comment.id }}/toggle">
+          <button type="submit">Aprobar</button>
+        </form>
+        <form method="post" action="/admin/comments/{{ comment.id }}/delete">
+          <button type="submit">Borrar</button>
+        </form>
+      </div>
+    </article>
+    {% else %}
+    <p class="small-note">No hay comentarios pendientes.</p>
+    {% endfor %}
+  </div>
+</section>
+{% endblock %}

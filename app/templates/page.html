@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}{{ page.title }} | A.S.E.{% endblock %}
+{% block content %}
+<article class="detail-page">
+  <header class="detail-header">
+    <p class="eyebrow">Pagina</p>
+    <h1>{{ page.title }}</h1>
+    <p class="detail-summary">{{ page.excerpt }}</p>
+  </header>
+  <section class="prose">{{ body_html | safe }}</section>
+</article>
+{% endblock %}

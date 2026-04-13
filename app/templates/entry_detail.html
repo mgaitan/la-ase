@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}{{ entry.title }} | A.S.E.{% endblock %}
+{% block content %}
+<article class="detail-page">
+  <header class="detail-header">
+    <p class="eyebrow">{{ entry.category.name if entry.category else "A.S.E." }}</p>
+    <h1>{{ entry.title }}</h1>
+    <p class="detail-summary">{{ entry.summary }}</p>
+    <div class="meta-row">
+      <span>{{ entry.author_name }}</span>
+      <span>{{ entry.created_at.strftime("%d/%m/%Y") }}</span>
+    </div>
+    <div class="tag-row">
+      {% for tag in entry.tags %}
+      <a href="/etiquetas/{{ tag.slug }}">{{ tag.name }}</a>
+      {% endfor %}
+    </div>
+  </header>
+
+  <section class="prose">{{ body_html | safe }}</section>
+
+  {% if entry.kind == "blog" %}
+  <section class="comments-panel">
+    <h2>Comentarios</h2>
+    <p class="small-note">Los comentarios nuevos quedan pendientes hasta que alguien del club los apruebe.</p>
+    <form class="comment-form" method="post" action="/blog/{{ entry.slug }}/comentarios">
+      <label>
+        Nombre
+        <input type="text" name="author_name" required>
+      </label>
+      <label>
+        Comentario
+        <textarea name="content" rows="5" required></textarea>
+      </label>
+      <button class="button primary" type="submit">Enviar comentario</button>
+    </form>
+
+    <div class="comment-list">
+      {% for comment in comments %}
+      <article class="comment-card">
+        <strong>{{ comment.author_name }}</strong>
+        <span>{{ comment.created_at.strftime("%d/%m/%Y") }}</span>
+        <p>{{ comment.content }}</p>
+      </article>
+      {% else %}
+      <p class="small-note">Todavía no hay comentarios aprobados.</p>
+      {% endfor %}
+    </div>
+  </section>
+  {% endif %}
+</article>
+{% endblock %}

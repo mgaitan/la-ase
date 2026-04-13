@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}{{ title }} | A.S.E.{% endblock %}
+{% block content %}
+<section class="page-intro">
+  <p class="eyebrow">{{ title }}</p>
+  <h1>{{ subtitle }}</h1>
+  {% if section == "publicaciones" %}
+  <div class="filter-row">
+    <a class="{{ 'active' if not current_filter else '' }}" href="/publicaciones">Todas</a>
+    {% for category in categories %}
+    <a class="{{ 'active' if current_filter and current_filter.slug == category.slug else '' }}" href="/publicaciones?category={{ category.slug }}">{{ category.name }}</a>
+    {% endfor %}
+  </div>
+  {% endif %}
+</section>
+
+<section class="card-grid">
+  {% for entry in entries %}
+  <article class="content-card">
+    <div class="meta-row">
+      {% if entry.category %}
+      <span>{{ entry.category.name }}</span>
+      {% endif %}
+      <span>{{ entry.author_name }}</span>
+    </div>
+    <h2>{{ entry.title }}</h2>
+    <p>{{ entry.summary }}</p>
+    <div class="tag-row">
+      {% for tag in entry.tags %}
+      <a href="/etiquetas/{{ tag.slug }}">{{ tag.name }}</a>
+      {% endfor %}
+    </div>
+    <a href="{{ '/blog/' + entry.slug if entry.kind == 'blog' else '/publicaciones/' + entry.slug }}">Abrir texto</a>
+  </article>
+  {% else %}
+  <article class="empty-state">
+    <h2>Todavía no hay textos en esta sección.</h2>
+    <p>Cuando el club publique algo nuevo, va a aparecer acá.</p>
+  </article>
+  {% endfor %}
+</section>
+{% endblock %}

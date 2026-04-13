@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}{{ "Editar" if page else "Nueva" }} pagina | A.S.E.{% endblock %}
+{% block content %}
+<section class="admin-form-wrap">
+  <div class="page-intro">
+    <p class="eyebrow">Panel</p>
+    <h1>{{ "Editar" if page else "Nueva" }} pagina</h1>
+  </div>
+  <form method="post" action="/admin/pages/save" class="stack-form">
+    {% if page %}
+    <input type="hidden" name="page_id" value="{{ page.id }}">
+    {% endif %}
+    <label>
+      Titulo
+      <input type="text" name="title" value="{{ page.title if page else '' }}" required>
+    </label>
+    <label>
+      Extracto
+      <textarea name="excerpt" rows="3">{{ page.excerpt if page else '' }}</textarea>
+    </label>
+    <label>
+      Contenido
+      <textarea name="content" rows="14" required>{{ page.content if page else '' }}</textarea>
+    </label>
+    <label class="checkbox-row">
+      <input type="checkbox" name="is_published" {% if not page or page.is_published %}checked{% endif %}>
+      Publicada
+    </label>
+    <div class="admin-actions">
+      <button class="button primary" type="submit">Guardar</button>
+      <a class="button secondary" href="/admin">Cancelar</a>
+    </div>
+  </form>
+</section>
+{% endblock %}

@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% block title %}A.S.E. | Inicio{% endblock %}
+{% block content %}
+<section class="hero">
+  <div class="hero-copy">
+    <p class="eyebrow">Club creativo escolar</p>
+    <h1>Historias pequeñas con ideas enormes.</h1>
+    <p class="hero-text">La Asociacion Secreta de Escritores reúne a Ema, Gael y Oliver para leer, imaginar y publicar cuentos, poemas y hallazgos de su taller secreto.</p>
+    <div class="hero-actions">
+      <a class="button primary" href="/publicaciones">Leer publicaciones</a>
+      <a class="button secondary" href="/blog">Entrar al blog</a>
+    </div>
+  </div>
+  <div class="hero-card">
+    <span class="badge">A.S.E.</span>
+    <h2>5to grado B</h2>
+    <p>Escuela Sarmiento de Villa Los Aromos, Cordoba.</p>
+    <ul>
+      <li>Ema: ideas y observacion</li>
+      <li>Gael: aventuras y humor</li>
+      <li>Oliver: misterio y mundos imaginarios</li>
+    </ul>
+  </div>
+</section>
+
+<section class="section-grid">
+  <article class="story-panel">
+    <p class="eyebrow">Nuestra historia</p>
+    <h2>{{ story_page.title }}</h2>
+    <p>{{ story_page.excerpt }}</p>
+    <a href="/paginas/{{ story_page.slug }}">Conocer el origen de A.S.E.</a>
+  </article>
+  <article class="info-panel">
+    <p class="eyebrow">Que vas a encontrar</p>
+    <div class="pill-row">
+      <span>Cuentos</span>
+      <span>Poemas</span>
+      <span>Otros formatos</span>
+      <span>Etiquetas</span>
+      <span>Comentarios</span>
+    </div>
+  </article>
+</section>
+
+<section class="content-section">
+  <div class="section-heading">
+    <p class="eyebrow">Destacados</p>
+    <h2>Textos elegidos por el club</h2>
+  </div>
+  <div class="card-grid">
+    {% for entry in featured_entries %}
+    <article class="content-card">
+      <span class="card-kind">{{ "Blog" if entry.kind == "blog" else entry.category.name if entry.category else "Publicacion" }}</span>
+      <h3>{{ entry.title }}</h3>
+      <p>{{ entry.summary }}</p>
+      <a href="{{ '/blog/' + entry.slug if entry.kind == 'blog' else '/publicaciones/' + entry.slug }}">Leer más</a>
+    </article>
+    {% endfor %}
+  </div>
+</section>
+
+<section class="split-section">
+  <div>
+    <div class="section-heading">
+      <p class="eyebrow">Desde el blog</p>
+      <h2>Noticias y bitácora</h2>
+    </div>
+    {% for entry in latest_blog %}
+    <article class="list-card">
+      <h3><a href="/blog/{{ entry.slug }}">{{ entry.title }}</a></h3>
+      <p>{{ entry.summary }}</p>
+    </article>
+    {% endfor %}
+  </div>
+  <div>
+    <div class="section-heading">
+      <p class="eyebrow">Publicaciones</p>
+      <h2>Cuentos y poemas recientes</h2>
+    </div>
+    {% for entry in latest_publications %}
+    <article class="list-card">
+      <h3><a href="/publicaciones/{{ entry.slug }}">{{ entry.title }}</a></h3>
+      <p>{{ entry.summary }}</p>
+    </article>
+    {% endfor %}
+  </div>
+</section>
+{% endblock %}

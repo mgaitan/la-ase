@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}{{ site_name }}{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;700&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', path='/css/styles.css') }}">
+</head>
+<body>
+  <div class="page-shell">
+    <header class="site-header">
+      <div class="brand-block">
+        <a class="brand-mark" href="/">A.S.E.</a>
+        <div>
+          <p class="brand-kicker">Asociacion Secreta de Escritores</p>
+          <p class="brand-copy">Ema, Gael y Oliver escriben desde 5to grado B.</p>
+        </div>
+      </div>
+      <nav class="main-nav" aria-label="Principal">
+        {% for item in menu_items %}
+        <a href="{{ item.url }}">{{ item.label }}</a>
+        {% endfor %}
+        <a class="admin-link" href="/admin">Panel</a>
+      </nav>
+    </header>
+
+    <main>
+      {% block content %}{% endblock %}
+    </main>
+
+    <footer class="site-footer">
+      <div>
+        <strong>A.S.E.</strong>
+        <p>Club de lectura y escritura de la Escuela Sarmiento, Villa Los Aromos, Cordoba.</p>
+      </div>
+      <div class="footer-tags">
+        {% for tag in popular_tags[:6] %}
+        <a href="/etiquetas/{{ tag.slug }}">{{ tag.name }}</a>
+        {% endfor %}
+      </div>
+    </footer>
+  </div>
+</body>
+</html>

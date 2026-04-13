@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block title %}{{ "Editar" if entry else "Nueva" }} entrada | A.S.E.{% endblock %}
+{% block content %}
+<section class="admin-form-wrap">
+  <div class="page-intro">
+    <p class="eyebrow">Panel</p>
+    <h1>{{ "Editar" if entry else "Nueva" }} entrada</h1>
+  </div>
+  <form method="post" action="/admin/entries/save" class="stack-form">
+    {% if entry %}
+    <input type="hidden" name="entry_id" value="{{ entry.id }}">
+    {% endif %}
+    <label>
+      Titulo
+      <input type="text" name="title" value="{{ entry.title if entry else '' }}" required>
+    </label>
+    <label>
+      Resumen
+      <textarea name="summary" rows="3">{{ entry.summary if entry else '' }}</textarea>
+    </label>
+    <label>
+      Contenido
+      <textarea name="content" rows="14" required>{{ entry.content if entry else '' }}</textarea>
+    </label>
+    <div class="form-split">
+      <label>
+        Seccion
+        <select name="kind">
+          <option value="blog" {% if entry and entry.kind == "blog" %}selected{% endif %}>Blog</option>
+          <option value="publication" {% if entry and entry.kind == "publication" %}selected{% endif %}>Publicacion</option>
+        </select>
+      </label>
+      <label>
+        Autor
+        <input type="text" name="author_name" value="{{ entry.author_name if entry else 'A.S.E.' }}">
+      </label>
+    </div>
+    <label>
+      Categoria
+      <input list="categories" type="text" name="category_name" value="{{ entry.category.name if entry and entry.category else '' }}" placeholder="Cuentos, Poemas, Otros">
+      <datalist id="categories">
+        {% for category in categories %}
+        <option value="{{ category.name }}"></option>
+        {% endfor %}
+      </datalist>
+    </label>
+    <label>
+      Etiquetas
+      <input type="text" name="tag_names" value="{{ entry.tags | map(attribute='name') | join(', ') if entry else '' }}" placeholder="infantil, fantasia, amistad">
+    </label>
+    <label class="checkbox-row">
+      <input type="checkbox" name="is_published" {% if not entry or entry.is_published %}checked{% endif %}>
+      Publicada
+    </label>
+    <label class="checkbox-row">
+      <input type="checkbox" name="featured" {% if entry and entry.featured %}checked{% endif %}>
+      Destacar en inicio
+    </label>
+    <div class="admin-actions">
+      <button class="button primary" type="submit">Guardar</button>
+      <a class="button secondary" href="/admin">Cancelar</a>
+    </div>
+  </form>
+</section>
+{% endblock %}
