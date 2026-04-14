@@ -15,8 +15,8 @@
 
 <section class="admin-actions">
   <a class="button primary" href="/admin/entries/new">Nueva entrada</a>
-  {% if user.is_admin %}
   <a class="button secondary" href="/admin/pages/new">Nueva pagina</a>
+  {% if user.is_admin %}
   <a class="button secondary" href="/admin/menu/new">Nuevo item de menu</a>
   {% endif %}
 </section>
@@ -57,7 +57,6 @@
     {% endfor %}
   </div>
 
-  {% if user.is_admin %}
   <div class="admin-panel">
     <h2>Paginas</h2>
     {% for page in pages %}
@@ -76,6 +75,7 @@
     {% endfor %}
   </div>
 
+  {% if user.is_admin %}
   <div class="admin-panel">
     <h2>Menu</h2>
     {% for item in menu_items %}

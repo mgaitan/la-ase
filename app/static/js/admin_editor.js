@@ -77,6 +77,9 @@ editors.forEach((editor) => {
     }
     try {
       await uploadImage(editor, textarea, file);
+      if (!panel.hidden) {
+        await renderPreview(editor, textarea);
+      }
     } catch (error) {
       window.alert(error.message || "No se pudo subir la imagen.");
     } finally {

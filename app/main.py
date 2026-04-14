@@ -396,7 +396,7 @@ def admin_dashboard(request: Request, db: Session = Depends(get_db)):
     if not user.is_admin:
         entry_stmt = entry_stmt.where(Entry.author_name == user.display_name)
     entries = db.scalars(entry_stmt).all()
-    pages = db.scalars(select(Page).order_by(Page.updated_at.desc())).all() if user.is_admin else []
+    pages = db.scalars(select(Page).order_by(Page.updated_at.desc())).all()
     menu_items = db.scalars(select(MenuItem).order_by(MenuItem.position, MenuItem.id)).all() if user.is_admin else []
     pending_comments = (
         db.scalars(
@@ -508,13 +508,13 @@ def admin_delete_entry(request: Request, entry_id: int, db: Session = Depends(ge
 
 @app.get("/admin/pages/new")
 def admin_new_page(request: Request, db: Session = Depends(get_db)):
-    require_admin(request, db)
+    require_user(request, db)
     return templates.TemplateResponse(request, "admin_page_form.html", build_context(request, db, page=None))
 
 
 @app.get("/admin/pages/{page_id}/edit")
 def admin_edit_page(request: Request, page_id: int, db: Session = Depends(get_db)):
-    require_admin(request, db)
+    require_user(request, db)
     page = db.get(Page, page_id)
     if not page:
         raise HTTPException(status_code=404, detail="Pagina no encontrada")
@@ -531,7 +531,7 @@ def admin_save_page(
     is_published: bool = Form(False),
     db: Session = Depends(get_db),
 ):
-    require_admin(request, db)
+    require_user(request, db)
     page = db.get(Page, page_id) if page_id else Page()
     if page_id and not page:
         raise HTTPException(status_code=404, detail="Pagina no encontrada")
@@ -547,7 +547,7 @@ def admin_save_page(
 
 @app.post("/admin/pages/{page_id}/delete")
 def admin_delete_page(request: Request, page_id: int, db: Session = Depends(get_db)):
-    require_admin(request, db)
+    require_user(request, db)
     page = db.get(Page, page_id)
     if page:
         db.delete(page)
