@@ -304,6 +304,16 @@ a {
   border-radius: 0 16px 16px 0;
 }
 
+.prose img,
+.content-card img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 22px auto;
+  border-radius: 20px;
+  box-shadow: var(--shadow);
+}
+
 .comments-panel {
   margin-top: 34px;
   padding-top: 24px;

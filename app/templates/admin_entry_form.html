@@ -26,9 +26,10 @@
         <button type="button" data-action="quote">Cita</button>
         <button type="button" data-action="list">Lista</button>
         <button type="button" data-action="link">Link</button>
-        <button type="button" data-action="image">Imagen</button>
+        <button type="button" data-action="image-upload">Subir imagen</button>
         <button type="button" data-action="preview">Previsualizar</button>
       </div>
+      <input type="file" accept="image/png,image/jpeg,image/webp,image/gif" data-image-input hidden>
       <label>
         Contenido
         <textarea name="content" rows="14" required data-markdown-input data-preview-target="entry-content-preview">{{ entry.content if entry else '' }}</textarea>

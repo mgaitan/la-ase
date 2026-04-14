@@ -73,3 +73,18 @@ Antes del deploy conviene definir al menos:
 SESSION_SECRET='una-clave-larga-y-privada'
 ASE_ADMIN_PASSWORD='una-clave-segura'
 ```
+
+## Imagenes con Cloudflare R2
+
+La app ya soporta subida real de imágenes desde el editor del panel usando Cloudflare R2.
+
+Variables necesarias:
+
+```bash
+R2_ACCOUNT_ID='tu-account-id'
+R2_BUCKET_NAME='la-ase-media'
+R2_ACCESS_KEY_ID='tu-access-key-id'
+R2_SECRET_ACCESS_KEY='tu-secret-access-key'
+```
+
+Las imágenes se suben al bucket y luego se sirven desde la propia app en `/media/...`, así que no hace falta exponer el bucket públicamente.

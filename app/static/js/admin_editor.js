@@ -38,10 +38,43 @@ async function renderPreview(editor, textarea) {
   textarea.closest("label").hidden = true;
 }
 
+async function uploadImage(editor, textarea, file) {
+  const formData = new FormData();
+  formData.set("file", file);
+  const response = await fetch("/admin/uploads/images", {
+    method: "POST",
+    body: formData,
+    credentials: "same-origin",
+  });
+  const payload = await response.json();
+  if (!response.ok) {
+    throw new Error(payload.error || "No se pudo subir la imagen.");
+  }
+  const start = textarea.selectionStart;
+  const end = textarea.selectionEnd;
+  textarea.setRangeText(payload.markdown, start, end, "end");
+  textarea.focus();
+}
+
 editors.forEach((editor) => {
   const textarea = editor.querySelector("[data-markdown-input]");
   const panel = editor.querySelector("[data-preview-panel]");
   const fieldWrap = textarea.closest("label");
+  const imageInput = editor.querySelector("[data-image-input]");
+
+  imageInput.addEventListener("change", async () => {
+    const file = imageInput.files?.[0];
+    if (!file) {
+      return;
+    }
+    try {
+      await uploadImage(editor, textarea, file);
+    } catch (error) {
+      window.alert(error.message || "No se pudo subir la imagen.");
+    } finally {
+      imageInput.value = "";
+    }
+  });
 
   editor.addEventListener("click", async (event) => {
     const button = event.target.closest("button[data-action]");
@@ -60,10 +93,7 @@ editors.forEach((editor) => {
       const url = window.prompt("URL del enlace");
       if (url) wrapSelection(textarea, "[", `](${url})`, "texto");
     }
-    if (action === "image") {
-      const url = window.prompt("URL de la imagen");
-      if (url) wrapSelection(textarea, "![descripcion](", ")", url);
-    }
+    if (action === "image-upload") imageInput.click();
     if (action === "preview") await renderPreview(editor, textarea);
     if (action === "edit") {
       panel.hidden = true;

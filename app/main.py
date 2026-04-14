@@ -5,8 +5,8 @@ import os
 import re
 import unicodedata
 
-from fastapi import Depends, FastAPI, Form, HTTPException, Request, status
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi import Depends, FastAPI, File, Form, HTTPException, Request, UploadFile, status
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from markdown import markdown
@@ -19,6 +19,13 @@ from app.models import Category, Comment, Entry, MenuItem, Page, Tag, User
 from app.settings import load_env_file, require_env
 from app.seed import ensure_seed_data
 from app.security import hash_password, verify_password
+from app.storage import (
+    StorageNotConfiguredError,
+    StorageUploadError,
+    fetch_object,
+    is_r2_configured,
+    upload_image,
+)
 
 
 APP_DIR = Path(__file__).resolve().parent
@@ -321,6 +328,21 @@ def page_detail(request: Request, slug: str, db: Session = Depends(get_db)):
     )
 
 
+@app.get("/media/{object_key:path}")
+def media_object(object_key: str):
+    if not is_r2_configured():
+        raise HTTPException(status_code=503, detail="R2 no está configurado.")
+    try:
+        body, content_type = fetch_object(object_key)
+    except StorageUploadError:
+        raise HTTPException(status_code=404, detail="Imagen no encontrada") from None
+    return StreamingResponse(
+        body,
+        media_type=content_type,
+        headers={"Cache-Control": "public, max-age=31536000, immutable"},
+    )
+
+
 @app.get("/admin/login")
 def admin_login(request: Request, db: Session = Depends(get_db)):
     if get_current_user(request, db):
@@ -594,6 +616,38 @@ def admin_markdown_preview(
 ):
     require_user(request, db)
     return render_markdown(content)
+
+
+@app.post("/admin/uploads/images")
+async def admin_upload_image(
+    request: Request,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+):
+    require_user(request, db)
+    if not is_r2_configured():
+        return JSONResponse(
+            {"error": "R2 todavía no está configurado en este entorno."},
+            status_code=503,
+        )
+    content = await file.read()
+    try:
+        key = upload_image(
+            content=content,
+            content_type=file.content_type or "application/octet-stream",
+            filename=file.filename,
+        )
+    except StorageUploadError as exc:
+        return JSONResponse({"error": str(exc)}, status_code=400)
+    except StorageNotConfiguredError as exc:
+        return JSONResponse({"error": str(exc)}, status_code=503)
+
+    url = f"/media/{key}"
+    alt_text = Path(file.filename or "imagen").stem.replace("-", " ").replace("_", " ").strip() or "imagen"
+    return {
+        "url": url,
+        "markdown": f"![{alt_text}]({url})",
+    }
 
 
 @app.get("/admin/password")

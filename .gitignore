@@ -6,4 +6,5 @@ __pycache__/
 .env.*
 !.env.example
 .fastapicloud/
+.wrangler/
 data/*.db
