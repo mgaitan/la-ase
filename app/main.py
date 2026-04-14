@@ -31,13 +31,26 @@ from app.storage import (
 APP_DIR = Path(__file__).resolve().parent
 BASE_DIR = APP_DIR.parent
 load_env_file()
+STATIC_DIR = APP_DIR / "static"
+
+
+def compute_asset_version() -> str:
+    latest_mtime = max(
+        path.stat().st_mtime
+        for path in STATIC_DIR.rglob("*")
+        if path.is_file()
+    )
+    return str(int(latest_mtime))
+
+
+ASSET_VERSION = compute_asset_version()
 
 app = FastAPI(title="Asociacion Secreta de Escritores")
 app.add_middleware(
     SessionMiddleware,
     secret_key=require_env("SESSION_SECRET"),
 )
-app.mount("/static", StaticFiles(directory=APP_DIR / "static"), name="static")
+app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 templates = Jinja2Templates(directory=str(APP_DIR / "templates"))
 
 
@@ -74,6 +87,7 @@ def build_context(request: Request, db: Session, **extra: object) -> dict[str, o
         "popular_tags": popular_tags,
         "site_name": "A.S.E.",
         "current_user": current_user,
+        "asset_version": ASSET_VERSION,
     }
     context.update(extra)
     return context

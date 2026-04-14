@@ -54,5 +54,5 @@
 </section>
 {% endblock %}
 {% block scripts %}
-<script src="{{ url_for('static', path='/js/admin_editor.js') }}"></script>
+<script src="{{ url_for('static', path='/js/admin_editor.js') }}?v={{ asset_version }}"></script>
 {% endblock %}
