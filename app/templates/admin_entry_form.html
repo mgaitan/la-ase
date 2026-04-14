@@ -29,7 +29,7 @@
         <button type="button" data-action="image-upload">Subir imagen</button>
         <button type="button" data-action="preview">Previsualizar</button>
       </div>
-      <input type="file" accept="image/png,image/jpeg,image/webp,image/gif" data-image-input hidden>
+      <input type="file" accept="image/png,image/jpeg,image/webp,image/gif" data-image-input class="visually-hidden-file-input" tabindex="-1" aria-hidden="true">
       <label>
         Contenido
         <textarea name="content" rows="14" required data-markdown-input data-preview-target="entry-content-preview">{{ entry.content if entry else '' }}</textarea>

@@ -62,6 +62,14 @@ editors.forEach((editor) => {
   const fieldWrap = textarea.closest("label");
   const imageInput = editor.querySelector("[data-image-input]");
 
+  function openImagePicker() {
+    if (typeof imageInput.showPicker === "function") {
+      imageInput.showPicker();
+      return;
+    }
+    imageInput.click();
+  }
+
   imageInput.addEventListener("change", async () => {
     const file = imageInput.files?.[0];
     if (!file) {
@@ -93,7 +101,7 @@ editors.forEach((editor) => {
       const url = window.prompt("URL del enlace");
       if (url) wrapSelection(textarea, "[", `](${url})`, "texto");
     }
-    if (action === "image-upload") imageInput.click();
+    if (action === "image-upload") openImagePicker();
     if (action === "preview") await renderPreview(editor, textarea);
     if (action === "edit") {
       panel.hidden = true;
