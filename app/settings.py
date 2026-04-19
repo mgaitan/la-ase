@@ -39,3 +39,10 @@ def require_env(name: str) -> str:
         f"Missing required environment variable: {name}. "
         "Define it in the local .env file or in the deployment environment."
     )
+
+
+def get_env(name: str, default: str | None = None) -> str | None:
+    value = os.getenv(name)
+    if value:
+        return value
+    return default

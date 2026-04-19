@@ -2,7 +2,7 @@
 
 Sitio web de la **Asociacion Secreta de Escritores**, un club de lectura y escritura formado por Ema, Gael y Oliver.
 
-Está hecho con **FastAPI**, **SQLite**, plantillas del lado del servidor y un panel simple para publicar contenido.
+Está hecho con **FastAPI**, **SQLite/PostgreSQL**, plantillas del lado del servidor y un panel simple para publicar contenido.
 
 ## Qué incluye
 
@@ -43,6 +43,18 @@ uv run fastapi dev
 ```
 
 Nota: si ya se creó la base `data/ase.db`, cambiar estas variables no modifica el usuario existente. En ese caso tenés que borrar la base o actualizar el registro manualmente.
+
+## Base de datos
+
+En desarrollo local, si no definís `DATABASE_URL`, la app sigue usando SQLite en `data/ase.db`.
+
+En producción, si definís `DATABASE_URL`, la app usa esa conexión. Esto sirve para Neon con una URL como:
+
+```bash
+DATABASE_URL='postgresql://usuario:password@ep-xxxxxx.us-east-1.aws.neon.tech/dbname?sslmode=require'
+```
+
+Si la URL viene con esquema `postgres://`, la app también la adapta automáticamente.
 
 ## Estructura principal
 
@@ -88,3 +100,5 @@ R2_SECRET_ACCESS_KEY='tu-secret-access-key'
 ```
 
 Las imágenes se suben al bucket y luego se sirven desde la propia app en `/media/...`, así que no hace falta exponer el bucket públicamente.
+
+Al subirlas, la app ahora las redimensiona automáticamente para que ningún lado supere `1280px`, manteniendo proporción.

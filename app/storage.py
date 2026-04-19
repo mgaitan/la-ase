@@ -9,6 +9,7 @@ import secrets
 import boto3
 from botocore.client import Config
 from botocore.exceptions import BotoCoreError, ClientError
+from PIL import Image, ImageOps, ImageSequence, UnidentifiedImageError
 
 from app.settings import load_env_file
 
@@ -27,6 +28,7 @@ ALLOWED_IMAGE_TYPES = {
     "image/gif": ".gif",
 }
 MAX_IMAGE_SIZE = 8 * 1024 * 1024
+MAX_IMAGE_DIMENSION = 1280
 
 
 class StorageNotConfiguredError(RuntimeError):
@@ -35,6 +37,60 @@ class StorageNotConfiguredError(RuntimeError):
 
 class StorageUploadError(RuntimeError):
     pass
+
+
+def _resize_frame(frame: Image.Image) -> Image.Image:
+    resized = ImageOps.exif_transpose(frame)
+    if max(resized.size) <= MAX_IMAGE_DIMENSION:
+        return resized
+    resized.thumbnail((MAX_IMAGE_DIMENSION, MAX_IMAGE_DIMENSION), Image.Resampling.LANCZOS)
+    return resized
+
+
+def _normalize_image(content: bytes, content_type: str) -> bytes:
+    try:
+        with Image.open(io.BytesIO(content)) as image:
+            if content_type == "image/gif":
+                frames: list[Image.Image] = []
+                durations: list[int] = []
+                for frame in ImageSequence.Iterator(image):
+                    resized = _resize_frame(frame.copy().convert("RGBA"))
+                    frames.append(resized)
+                    durations.append(frame.info.get("duration", image.info.get("duration", 100)))
+
+                if not frames:
+                    raise StorageUploadError("No se pudo procesar la imagen.")
+
+                output = io.BytesIO()
+                frames[0].save(
+                    output,
+                    format="GIF",
+                    save_all=True,
+                    append_images=frames[1:],
+                    loop=image.info.get("loop", 0),
+                    duration=durations,
+                    optimize=True,
+                )
+                return output.getvalue()
+
+            resized = _resize_frame(image.copy())
+            output = io.BytesIO()
+            save_kwargs: dict[str, object] = {}
+
+            if content_type == "image/jpeg":
+                resized = resized.convert("RGB")
+                save_kwargs = {"format": "JPEG", "quality": 85, "optimize": True}
+            elif content_type == "image/png":
+                save_kwargs = {"format": "PNG", "optimize": True}
+            elif content_type == "image/webp":
+                save_kwargs = {"format": "WEBP", "quality": 85, "method": 6}
+
+            resized.save(output, **save_kwargs)
+            return output.getvalue()
+    except UnidentifiedImageError as exc:
+        raise StorageUploadError("El archivo subido no es una imagen valida.") from exc
+
+    raise StorageUploadError("No se pudo procesar la imagen.")
 
 
 def is_r2_configured() -> bool:
@@ -79,8 +135,10 @@ def get_bucket_name() -> str:
 def upload_image(*, content: bytes, content_type: str, filename: str | None = None) -> str:
     if content_type not in ALLOWED_IMAGE_TYPES:
         raise StorageUploadError("Formato no permitido. Usa JPG, PNG, WEBP o GIF.")
+
+    content = _normalize_image(content, content_type)
     if len(content) > MAX_IMAGE_SIZE:
-        raise StorageUploadError("La imagen supera el límite de 8 MB.")
+        raise StorageUploadError("La imagen procesada supera el límite de 8 MB.")
 
     suffix = ALLOWED_IMAGE_TYPES[content_type]
     original_stem = Path(filename or "imagen").stem
