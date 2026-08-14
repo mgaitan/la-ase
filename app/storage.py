@@ -29,6 +29,7 @@ ALLOWED_IMAGE_TYPES = {
 }
 MAX_IMAGE_SIZE = 8 * 1024 * 1024
 MAX_IMAGE_DIMENSION = 1280
+MAX_UPLOAD_SIZE = 32 * 1024 * 1024
 
 
 class StorageNotConfiguredError(RuntimeError):

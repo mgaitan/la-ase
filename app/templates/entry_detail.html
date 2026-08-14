@@ -19,11 +19,11 @@
 
   <section class="prose">{{ body_html | safe }}</section>
 
-  {% if entry.kind == "blog" %}
+  {% if entry.kind in ["blog", "publication"] %}
   <section class="comments-panel">
     <h2>Comentarios</h2>
     <p class="small-note">Los comentarios nuevos quedan pendientes hasta que alguien del club los apruebe.</p>
-    <form class="comment-form" method="post" action="/blog/{{ entry.slug }}/comentarios">
+    <form class="comment-form" method="post" action="{{ '/blog/' + entry.slug + '/comentarios' if entry.kind == 'blog' else '/publicaciones/' + entry.slug + '/comentarios' }}">
       <label>
         Nombre
         <input type="text" name="author_name" required>

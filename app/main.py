@@ -20,6 +20,7 @@ from app.settings import load_env_file, require_env
 from app.seed import ensure_seed_data
 from app.security import hash_password, verify_password
 from app.storage import (
+    MAX_UPLOAD_SIZE,
     StorageNotConfiguredError,
     StorageUploadError,
     fetch_object,
@@ -314,19 +315,45 @@ def submit_comment(
     return RedirectResponse(url=f"/blog/{slug}?comentario=pendiente", status_code=status.HTTP_303_SEE_OTHER)
 
 
+@app.post("/publicaciones/{slug}/comentarios")
+def submit_publication_comment(
+    slug: str,
+    author_name: str = Form(...),
+    content: str = Form(...),
+    db: Session = Depends(get_db),
+):
+    entry = db.scalar(
+        select(Entry).where(
+            Entry.slug == slug,
+            Entry.kind == "publication",
+            Entry.is_published.is_(True),
+        )
+    )
+    if not entry:
+        raise HTTPException(status_code=404, detail="Publicacion no encontrada")
+    comment = Comment(author_name=author_name.strip(), content=content.strip(), entry=entry, is_approved=False)
+    db.add(comment)
+    db.commit()
+    return RedirectResponse(
+        url=f"/publicaciones/{slug}?comentario=pendiente",
+        status_code=status.HTTP_303_SEE_OTHER,
+    )
+
+
 @app.get("/publicaciones/{slug}")
 def publication_detail(request: Request, slug: str, db: Session = Depends(get_db)):
     entry = db.scalar(
         select(Entry)
-        .options(joinedload(Entry.category), selectinload(Entry.tags))
+        .options(joinedload(Entry.category), selectinload(Entry.tags), selectinload(Entry.comments))
         .where(Entry.slug == slug, Entry.kind == "publication", Entry.is_published.is_(True))
     )
     if not entry:
         raise HTTPException(status_code=404, detail="Publicacion no encontrada")
+    approved_comments = [comment for comment in entry.comments if comment.is_approved]
     return templates.TemplateResponse(
         request,
         "entry_detail.html",
-        build_context(request, db, entry=entry, body_html=render_markdown(entry.content), comments=[]),
+        build_context(request, db, entry=entry, body_html=render_markdown(entry.content), comments=approved_comments),
     )
 
 
@@ -644,7 +671,12 @@ async def admin_upload_image(
             {"error": "R2 todavía no está configurado en este entorno."},
             status_code=503,
         )
-    content = await file.read()
+    content = await file.read(MAX_UPLOAD_SIZE + 1)
+    if len(content) > MAX_UPLOAD_SIZE:
+        return JSONResponse(
+            {"error": "La imagen original supera el límite de 32 MB."},
+            status_code=413,
+        )
     try:
         key = upload_image(
             content=content,

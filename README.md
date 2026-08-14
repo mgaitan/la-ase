@@ -54,6 +54,25 @@ En producción, si definís `DATABASE_URL`, la app usa esa conexión. Esto sirve
 DATABASE_URL='postgresql://usuario:password@ep-xxxxxx.us-east-1.aws.neon.tech/dbname?sslmode=require'
 ```
 
+Si se pierde el `.env`, no se puede recuperar el valor de un secreto: hay que obtener una nueva URL de conexión desde Neon, crear nuevas credenciales R2 en Cloudflare y cargarlas de nuevo en FastAPI Cloud. Con la cuenta propietaria de la app:
+
+```bash
+uv run fastapi login
+uv run fastapi cloud link
+uv run fastapi cloud env set --secret DATABASE_URL 'postgresql://...'
+uv run fastapi cloud env set --secret SESSION_SECRET "$(openssl rand -hex 32)"
+uv run fastapi cloud env set --secret ASE_ADMIN_PASSWORD '...'
+uv run fastapi cloud env set --secret ASE_EMA_PASSWORD '...'
+uv run fastapi cloud env set --secret ASE_GAEL_PASSWORD '...'
+uv run fastapi cloud env set --secret ASE_OLIVER_PASSWORD '...'
+uv run fastapi cloud env set --secret R2_ACCOUNT_ID '...'
+uv run fastapi cloud env set --secret R2_BUCKET_NAME 'la-ase-media'
+uv run fastapi cloud env set --secret R2_ACCESS_KEY_ID '...'
+uv run fastapi cloud env set --secret R2_SECRET_ACCESS_KEY '...'
+```
+
+Los cambios de variables se aplican en el próximo deploy. `SESSION_SECRET` nuevo invalida las sesiones activas; las contraseñas de usuarios ya existentes se cambian desde el panel.
+
 Si la URL viene con esquema `postgres://`, la app también la adapta automáticamente.
 
 ## Estructura principal
@@ -102,3 +121,9 @@ R2_SECRET_ACCESS_KEY='tu-secret-access-key'
 Las imágenes se suben al bucket y luego se sirven desde la propia app en `/media/...`, así que no hace falta exponer el bucket públicamente.
 
 Al subirlas, la app ahora las redimensiona automáticamente para que ningún lado supere `1280px`, manteniendo proporción.
+
+## Backups de producción
+
+El workflow `.github/workflows/backup.yml` hace un backup diario de PostgreSQL en `backups/postgres/` dentro de R2 y elimina archivos de más de 30 días. También se puede ejecutar manualmente desde GitHub Actions.
+
+Para activarlo, agregá estos secretos del repositorio: `DATABASE_URL`, `R2_ACCOUNT_ID`, `R2_BUCKET_NAME`, `R2_ACCESS_KEY_ID` y `R2_SECRET_ACCESS_KEY`. La URL de base y las credenciales R2 deben ser las mismas que usa la aplicación en producción.

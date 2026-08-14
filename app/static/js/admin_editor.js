@@ -38,9 +38,38 @@ async function renderPreview(editor, textarea) {
   textarea.closest("label").hidden = true;
 }
 
+async function resizeImageForUpload(file) {
+  const maxDimension = 1280;
+  if (file.type === "image/gif") {
+    return file;
+  }
+
+  const image = await createImageBitmap(file, { imageOrientation: "from-image" });
+  if (Math.max(image.width, image.height) <= maxDimension) {
+    image.close();
+    return file;
+  }
+
+  const scale = maxDimension / Math.max(image.width, image.height);
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.round(image.width * scale);
+  canvas.height = Math.round(image.height * scale);
+  canvas.getContext("2d").drawImage(image, 0, 0, canvas.width, canvas.height);
+  image.close();
+
+  const blob = await new Promise((resolve) => {
+    canvas.toBlob(resolve, file.type === "image/png" ? "image/png" : file.type, 0.85);
+  });
+  if (!blob) {
+    return file;
+  }
+  return new File([blob], file.name, { type: blob.type });
+}
+
 async function uploadImage(editor, textarea, file) {
+  const uploadFile = await resizeImageForUpload(file);
   const formData = new FormData();
-  formData.set("file", file);
+  formData.set("file", uploadFile);
   const response = await fetch("/admin/uploads/images", {
     method: "POST",
     body: formData,

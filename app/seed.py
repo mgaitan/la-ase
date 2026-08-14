@@ -58,7 +58,7 @@ def ensure_seed_data(db: Session) -> None:
         username="ema",
         display_name="Ema",
         password=require_env("ASE_EMA_PASSWORD"),
-        is_admin=False,
+        is_admin=True,
     )
     ensure_user(
         db,
@@ -75,7 +75,38 @@ def ensure_seed_data(db: Session) -> None:
         is_admin=False,
     )
 
+    # Repair foundational content on databases created before pages were seeded.
     if db.scalar(select(Entry.id).limit(1)):
+        if not db.scalar(select(Page.id).where(Page.slug == "nuestra-historia")):
+            db.add(
+                Page(
+                    title="Nuestra historia",
+                    slug="nuestra-historia",
+                    excerpt="Como nació la Asociación Secreta de Escritores.",
+                    content="""
+La **Asociación Secreta de Escritores** nació en 5to grado B, en la Escuela Sarmiento de Villa Los Aromos.
+
+Ema, Gael y Oliver descubrieron que compartían algo importante: les gustaba leer, escribir, inventar personajes y conversar sobre historias.
+
+Entonces decidieron formar un grupo propio, con nombre misterioso y espíritu creativo: la **A.S.E.**
+
+Desde ese día empezaron a guardar ideas, escribir cuentos, probar poemas y pensar nuevas publicaciones para compartir con sus familias, su escuela y cualquier lector curioso.
+""".strip(),
+                    is_published=True,
+                )
+            )
+
+        if not db.scalar(select(MenuItem.id).limit(1)):
+            db.add_all(
+                [
+                    MenuItem(label="Inicio", url="/", position=1),
+                    MenuItem(label="Nuestra historia", url="/paginas/nuestra-historia", position=2),
+                    MenuItem(label="Blog", url="/blog", position=3),
+                    MenuItem(label="Publicaciones", url="/publicaciones", position=4),
+                    MenuItem(label="Etiquetas", url="/etiquetas/infantil", position=5),
+                ]
+            )
+
         db.commit()
         return
 
