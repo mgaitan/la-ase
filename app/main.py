@@ -10,7 +10,7 @@ from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Stre
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from markdown import markdown
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session, joinedload, selectinload
 from starlette.middleware.sessions import SessionMiddleware
 
@@ -116,7 +116,11 @@ def require_user(request: Request, db: Session) -> User:
 
 
 def get_author_users(db: Session) -> list[User]:
-    return db.scalars(select(User).where(User.is_admin.is_(False)).order_by(User.display_name)).all()
+    return db.scalars(
+        select(User)
+        .where(or_(User.is_admin.is_(False), User.username == "ema"))
+        .order_by(User.display_name)
+    ).all()
 
 
 def can_manage_entry(user: User, entry: Entry) -> bool:
